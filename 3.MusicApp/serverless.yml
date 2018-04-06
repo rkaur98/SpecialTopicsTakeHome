@@ -1,0 +1,98 @@
+
+service: serdropbox 
+
+provider:
+  name: aws
+  runtime: nodejs6.10
+
+  stage: dev
+  region: us-east-2
+
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: "arn:aws:dynamodb:us-east-2:*:*"
+
+    - Effect: Allow
+      Action:
+        - s3:PutObject
+        - s3:GetObject
+      Resource: "*"  
+
+
+functions:
+  filestrack:
+    handler: handler.filestrack
+    events:
+      - http:
+          path: filestrack-endpoint
+          method: GET
+  postplaylist:
+    handler: handler.postplaylist
+    events:
+      - http:
+          path: postplaylist-endpoint
+          method: POST
+  getplaylist:
+    handler: handler.getplaylist
+    events:
+      - http:
+          path: postplaylist-endpoint
+          method: GET
+  postprocess:
+    handler: handler.postprocess
+    events:
+      - s3:
+          bucket: dropbox-bucket1
+          event: s3:ObjectCreated:*
+      - s3:
+          bucket: dropbox-bucket1
+          event: s3:ObjectRemoved:*
+  
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    DropboxBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: dropbox-bucket
+
+    DropboxFileTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: dropbox-file-table1
+        AttributeDefinitions:
+          - AttributeName: fileName
+            AttributeType: S
+          
+        KeySchema:
+          - AttributeName: fileName
+            KeyType: HASH
+        
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+
+    PlaylistFileTable:
+      Type: "AWS::DynamoDB::Table"
+      Properties:
+        TableName: playlist-file-table1
+        AttributeDefinitions:
+          - AttributeName: fileName
+            AttributeType: S
+          
+        KeySchema:
+          - AttributeName: fileName
+            KeyType: HASH
+        
+        ProvisionedThroughput:
+          ReadCapacityUnits: 5
+          WriteCapacityUnits: 5
+         
